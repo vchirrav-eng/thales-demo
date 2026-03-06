@@ -13,6 +13,7 @@ st.set_page_config(page_title="SEC546 Lab 1.1 — Securing Agentic Apps with Gua
 
 # --- SPACE-LEVEL SECRET (optional custom LLM endpoint) ---
 OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")  # None falls back to OpenAI default
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 # --- SHARED RAG SETUP ---
 @st.cache_resource(show_spinner="⚙️ Initializing vector database...")
@@ -42,8 +43,7 @@ collection = init_rag()
 # --- RAG HELPER FUNCTIONS ---
 def call_llm(prompt: str) -> str:
     import openai
-    _key = st.session_state.get("openai_api_key", "")
-    _kwargs = {"api_key": _key}
+    _kwargs = {"api_key": OPENAI_API_KEY}
     if OPENAI_API_BASE:
         _kwargs["base_url"] = OPENAI_API_BASE
     client = openai.OpenAI(**_kwargs)
@@ -128,105 +128,7 @@ components.html('''<script>
 </script>''', height=0)
 
 
-st.markdown("#### Enter your OpenAI API key to unlock the lab")
-
-_, col_oai, _ = st.columns([2, 4, 2])
-with col_oai:
-    api_key_input = st.text_input(
-        "OpenAI API Key",
-        type="password",
-        placeholder="sk-...",
-        key="api_key_field",
-    )
-
-_, col_btn, _ = st.columns([4, 2, 4])
-with col_btn:
-    submit_key = st.button("🔓 Unlock Lab", type="primary", use_container_width=True)
-
-# Handle submission
-if submit_key:
-    if not api_key_input.strip():
-        st.warning("Please enter your OpenAI API Key.")
-    else:
-        with st.spinner("Validating OpenAI API key..."):
-            try:
-                import openai as _openai
-                _kwargs = {"api_key": api_key_input.strip()}
-                if OPENAI_API_BASE:
-                    _kwargs["base_url"] = OPENAI_API_BASE
-                _test_client = _openai.OpenAI(**_kwargs)
-                _test_client.models.list()  # lightweight auth check
-                st.session_state["api_key_valid"] = True
-                st.session_state["openai_api_key"] = api_key_input.strip()
-                st.rerun()
-            except Exception as e:
-                st.session_state["api_key_valid"] = False
-                st.error(f"❌ OpenAI API key validation failed: {e}")
-
-# --- GATE: show locked UI if credentials not yet validated ---
-if not st.session_state.get("api_key_valid", False):
-    st.markdown("""
-    <div style="position: relative; margin-top: 24px; border-radius: 14px; overflow: hidden;">
-        <div style="
-            filter: blur(5px);
-            pointer-events: none;
-            user-select: none;
-            padding: 32px;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 14px;
-            min-height: 480px;
-            line-height: 2;
-        ">
-            <h2>Step 0: Explore the Knowledge Base (Vector Database)</h2>
-            <p>Before we attack or defend anything, let's understand what data lives inside
-            the corporate knowledge base. This is a ChromaDB vector database pre-loaded
-            with two sensitive documents that represent real enterprise content.</p>
-            <h2>Step 1: The Unprotected RAG Application</h2>
-            <p>We have a simulated corporate knowledge base containing two sensitive documents.
-            The unprotected_rag function retrieves relevant context and blindly forwards
-            everything to the LLM — no validation, no filtering.</p>
-            <h2>Step 2: Input Guard — Block Malicious Prompts</h2>
-            <p>We intercept every user query before it reaches the vector database or LLM.
-            A custom PreventCredentialHunting validator inspects the prompt for suspicious
-            keywords and blocks at the application boundary.</p>
-            <h2>Step 3: Output Guard — Prevent Sensitive Data in Responses</h2>
-            <p>Input validation is not enough on its own. We add a second layer — an Output Guard
-            using the CompetitorCheck validator — which scans the LLM output before delivery.</p>
-            <h2>Step 4: Fully Secured Pipeline — Defense in Depth</h2>
-            <p>Combine both guards into a three-phase pipeline covering input validation,
-            LLM generation, and output validation.</p>
-        </div>
-        <div style="
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.45);
-            border-radius: 14px;
-        ">
-            <div style="
-                text-align: center;
-                background: white;
-                padding: 44px 64px;
-                border-radius: 16px;
-                box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-                border: 2px solid #e0e0e0;
-            ">
-                <div style="font-size: 72px; line-height: 1;">🔒</div>
-                <h2 style="margin: 20px 0 10px; color: #333;">Lab Locked</h2>
-                <p style="color: #666; margin: 0; font-size: 16px;">
-                    Enter your OpenAI API key above,<br>
-                    then click <strong>Unlock Lab</strong> to begin.
-                </p>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.stop()
-
-st.success("✅ API key validated — lab is unlocked.")
+st.success("✅ Lab is unlocked and ready.")
 
 st.markdown("""
 **Goal:** Build a basic RAG chatbot, observe how it can be exploited,
